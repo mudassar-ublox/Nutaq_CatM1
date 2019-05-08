@@ -158,12 +158,14 @@ if __name__ == '__main__':
     password = sys.argv[3]
     mme_port = int(sys.argv[4])
     enb_port = int(sys.argv[5])
+    command = "call mbedgt -vV -n " + sys.argv[6] + " --report-junit=report.xml"
 
     print("host name: ", host) 
     print("user name: ", user) 
     print("password: ", password) 
     print("mme_port: ", mme_port) 
     print("enb_port: ", enb_port) 
+    print("command: ", command)
     print("\nCAT-M1 Stop")
     sys.stdout.flush()
     
@@ -179,7 +181,7 @@ if __name__ == '__main__':
     print("CAT-M1 Running . . .")
     sys.stdout.flush()
 
-    os.system("call mbedgt -vV --report-junit=report.xml")
+    os.system(command)
     sys.stdout.flush()
     time.sleep(20)
             
