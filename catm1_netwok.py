@@ -12,9 +12,16 @@ sys.stdout.flush()
 
 ssh = ''
 SSH_COMMAND = "echo 'Echo Back Success'"
+
+#M1 Settings
 nutaq_path = "Desktop/StkTool/CAT-M1/"
-start_mme = '(cd Desktop/StkTool/CAT-M1/; sudo -S ./launch_epc.sh "R1804")'
-start_enb = '(cd Desktop/StkTool/CAT-M1/; sudo -S ./launch_enb.sh "R1804")'
+m1_path_mme = '(cd Desktop/StkTool/CAT-M1/; sudo -S ./launch_epc.sh "R1804")'
+m1_path_enb = '(cd Desktop/StkTool/CAT-M1/; sudo -S ./launch_enb.sh "R1804")'
+
+#NB1 Settings
+nb1_nutaq_path = "Desktop/StkTool/NB1/"
+nb1_path_mme = '(cd Desktop/StkTool/NB1/; sudo -S ./launch_epc.sh "R1804")'
+nb1_path_enb = '(cd Desktop/StkTool/NB1/; sudo -S ./launch_enb.sh "R1804")'
 ssh_stdin = ssh_stdout = ssh_stderr = None
 
 class WSNoConnectError(Exception):
@@ -25,19 +32,21 @@ class WSNoConnectError(Exception):
 
 
 class Nutaq():
-    def __init__(self, host, user, password, mme_port, enb_port):
+    def __init__(self, host, user, password, mme_port, enb_port, network):
         self.host = host
         self.user = user
         self.password = password
         self.mme_port = mme_port
         self.enb_port = enb_port
+        self.network = network
         
         print("\n") 
-        print(self.host) 
-        print(self.user) 
-        print(self.password) 
-        print(self.mme_port) 
-        print(self.enb_port) 
+        print(self.host)
+        print(self.user)
+        print(self.password)
+        print(self.mme_port)
+        print(self.enb_port)
+        print(self.network)
         sys.stdout.flush()  
         
     def ssh_connect(self):
@@ -83,7 +92,14 @@ class Nutaq():
         except socket.error:
             print("Configurations are not loaded on nutaq, system is ready to start mme and enb")
 
-        mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(start_mme)
+	if self.network == "M1":
+            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
+	elif self.network == "NB1":
+            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(nb1_path_mme)
+	else:
+            #Default CAT-M1 network
+            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
+
         time.sleep(5)
         mme_stdin.write('nutaq\n')
         mme_stdin.flush()
@@ -94,7 +110,14 @@ class Nutaq():
 
     def run_enb(self):
         try:
-            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(start_enb)
+            if self.network == "M1":
+                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_enb)
+            elif self.network == "NB1":
+                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(nb1_path_enb)
+            else:
+                #Default CAT-M1 network
+                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_enb)
+
             time.sleep(5)
             mme_stdin.write('nutaq\n')
             mme_stdin.flush()
@@ -158,7 +181,8 @@ if __name__ == '__main__':
     password = sys.argv[3]
     mme_port = int(sys.argv[4])
     enb_port = int(sys.argv[5])
-    executionTime = int(sys.argv[6])
+    network = sys.argv[6]
+    executionTime = int(sys.argv[7])
     executionTime = executionTime*60
 
     print("host name: ", host) 
@@ -166,10 +190,11 @@ if __name__ == '__main__':
     print("password: ", password) 
     print("mme_port: ", mme_port) 
     print("enb_port: ", enb_port) 
+    print("network: ", network)
     print("Timeout : ", executionTime) 
     print("\n")    
     
-    Nutaq_Handler = Nutaq(host, user, password, mme_port, enb_port)
+    Nutaq_Handler = Nutaq(host, user, password, mme_port, enb_port, network)
     Nutaq_Handler.ssh_connect()
     Nutaq_Handler.ssh_command() # Check SSH connection
     print("SSH connection successfull")
