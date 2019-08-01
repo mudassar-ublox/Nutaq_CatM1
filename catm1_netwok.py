@@ -1,5 +1,3 @@
-
-
 from websocket import create_connection
 import websocket
 import socket
@@ -203,7 +201,14 @@ if __name__ == '__main__':
     Nutaq_Handler.run_mme()
     Nutaq_Handler.run_enb()
     Nutaq_Handler.connect_mme_enb_sockets()
-    print("CAT-M1 Running . . .")
+
+    if network == "M1":
+        print("CAT-M1 Network Running . . .")
+    elif network == "NB1":
+        print("NB-IoT Network Running . . .")
+    else:
+        print("CAT-M1 Network Running . . .")
+
     sys.stdout.flush()
     time.sleep(executionTime)
             
@@ -212,7 +217,3 @@ if __name__ == '__main__':
     sys.stdout.flush()
         
     Nutaq_Handler.ssh_close()
-    
-    
-
-            

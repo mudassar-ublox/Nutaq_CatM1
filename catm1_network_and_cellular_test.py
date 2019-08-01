@@ -1,4 +1,3 @@
-
 from websocket import create_connection
 import websocket
 import socket
@@ -183,8 +182,11 @@ if __name__ == '__main__':
     password = sys.argv[3]
     mme_port = int(sys.argv[4])
     enb_port = int(sys.argv[5])
-    network = sys.argv[6]
-    command = "call mbedgt -vV -n " + sys.argv[7] + " --report-junit=report.xml"
+    command = "call mbedgt -vV -n " + sys.argv[6] + " --report-junit=report.xml"
+    if sys.argv[7:]:
+        network = sys.argv[7]
+    else:
+        network = "void"
 
     print("host name: ", host) 
     print("user name: ", user) 
@@ -193,7 +195,7 @@ if __name__ == '__main__':
     print("enb_port: ", enb_port) 
     print("command: ", command)
     print("network: ", network)
-    print("\nCAT-M1 Stop")
+    print("\n")
     sys.stdout.flush()
     
     Nutaq_Handler = Nutaq(host, user, password, mme_port, enb_port, network)
@@ -205,7 +207,14 @@ if __name__ == '__main__':
     Nutaq_Handler.run_mme()
     Nutaq_Handler.run_enb()
     Nutaq_Handler.connect_mme_enb_sockets()
-    print("CAT-M1 Running . . .")
+
+    if network == "M1":
+        print("CAT-M1 Network Running . . .")
+    elif network == "NB1":
+        print("NB-Iot Network Running . . .")
+    else:
+        print("CAT-M1 Network Running . . .")
+
     sys.stdout.flush()
 
     os.system(command)
