@@ -190,30 +190,36 @@ if __name__ == '__main__':
     print("enb_port: ", enb_port) 
     print("network: ", network)
     print("Timeout : ", executionTime) 
-    print("\n")    
-    
-    Nutaq_Handler = Nutaq(host, user, password, mme_port, enb_port, network)
-    Nutaq_Handler.ssh_connect()
-    Nutaq_Handler.ssh_command() # Check SSH connection
-    print("SSH connection successfull")
-    sys.stdout.flush()
+    print("\n")
 
-    Nutaq_Handler.run_mme()
-    Nutaq_Handler.run_enb()
-    Nutaq_Handler.connect_mme_enb_sockets()
-
-    if network == "M1":
-        print("CAT-M1 Network Running . . .")
-    elif network == "NB1":
-        print("NB-IoT Network Running . . .")
+    if network == "EMPTY":
+        print("Network Running . . .")
+        sys.stdout.flush()
+        time.sleep(executionTime)
     else:
-        print("CAT-M1 Network Running . . .")
+        Nutaq_Handler = Nutaq(host, user, password, mme_port, enb_port, network)
+        Nutaq_Handler.ssh_connect()
+        Nutaq_Handler.ssh_command() # Check SSH connection
+        print("SSH connection successfull")
+        sys.stdout.flush()
 
-    sys.stdout.flush()
-    time.sleep(executionTime)
-            
-    Nutaq_Handler.stop_mme_enb()
-    print("CAT-M1 Stop")
-    sys.stdout.flush()
-        
-    Nutaq_Handler.ssh_close()
+        Nutaq_Handler.run_mme()
+        Nutaq_Handler.run_enb()
+        Nutaq_Handler.connect_mme_enb_sockets()
+
+        if network == "M1":
+            print("CAT-M1 Network Running . . .")
+        elif network == "NB1":
+            print("NB-IoT Network Running . . .")
+        else:
+            print("CAT-M1 Network Running . . .")
+
+        sys.stdout.flush()
+        time.sleep(executionTime)
+
+        Nutaq_Handler.stop_mme_enb()
+        sys.stdout.flush()
+
+        Nutaq_Handler.ssh_close()
+
+    print("Network Finish")
