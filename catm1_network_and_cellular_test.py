@@ -23,8 +23,6 @@ nb1_path_mme = '(cd Desktop/StkTool/NB1/; sudo -S ./launch_epc.sh "R1804")'
 nb1_path_enb = '(cd Desktop/StkTool/NB1/; sudo -S ./launch_enb.sh "R1804")'
 ssh_stdin = ssh_stdout = ssh_stderr = None
 
-ssh_stdin = ssh_stdout = ssh_stderr = None
-
 class WSNoConnectError(Exception):
     """
     websocket connection error class
@@ -75,53 +73,42 @@ class Nutaq():
         print(stdout.read())
         
     def run_mme(self):
-        try:
-            self.sock_address = (self.host, self.mme_port)
-            print("sock address is ")
-            print(self.sock_address)
-            
-            self.sock = socket.socket()
-            self.sock.connect(self.sock_address)
-            
-            if self.sock:
-                print("Configurations already loaded on nutaq")
-                self.sock.close()
-                del self.sock
-                self.connect_mme_enb_sockets()
-                self.stop_mme_enb()
-
-        except socket.error:
-            print("Configurations are not loaded on nutaq, system is ready to start mme and enb")
-
-	if self.network == "M1":
-            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
-	elif self.network == "NB1":
-            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(nb1_path_mme)
-	else:
-            #Default CAT-M1 network
-            mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
-
-        time.sleep(5)
-        mme_stdin.write('nutaq\n')
-        mme_stdin.flush()
-        print("waiting 15 seconds to start MME properly ")
-        sys.stdout.flush()
-        time.sleep(15)
-
-
-    def run_enb(self):
+        print("\nStarting MME....")
         try:
             if self.network == "M1":
-                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_enb)
+                    mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
             elif self.network == "NB1":
-                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(nb1_path_enb)
+                    mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(nb1_path_mme)
             else:
-                #Default CAT-M1 network
-                mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_enb)
+                    #Default CAT-M1 network
+                    mme_stdin, mme_stdout, mme_stderr = self.ssh.exec_command(m1_path_mme)
 
             time.sleep(5)
             mme_stdin.write('nutaq\n')
             mme_stdin.flush()
+            print("waiting 15 seconds to start MME properly ")
+            sys.stdout.flush()
+            time.sleep(15)
+
+        except Exception as e:
+            sys.stderr.write("MME start up exception: {0}".format(e))
+            sys.stdout.flush()
+
+
+    def run_enb(self):
+        print("\nStarting ENB....")
+        try:
+            if self.network == "M1":
+                enb_stdin, enb_stdout, enb_stderr = self.ssh.exec_command(m1_path_enb)
+            elif self.network == "NB1":
+                enb_stdin, enb_stdout, enb_stderr = self.ssh.exec_command(nb1_path_enb)
+            else:
+                #Default CAT-M1 network
+                enb_stdin, enb_stdout, enb_stderr = self.ssh.exec_command(m1_path_enb)
+
+            time.sleep(5)
+            enb_stdin.write('nutaq\n')
+            enb_stdin.flush()
             print("waiting 20 seconds to start ENB properly ")
             sys.stdout.flush()
             time.sleep(20)
@@ -130,36 +117,49 @@ class Nutaq():
             sys.stderr.write("ENB start up exception: {0}".format(e))
             sys.stdout.flush()
 
-
-    def connect_mme_enb_sockets(self):
+    def connect_mme_socket(self):
         try:
-            print("Try in the connect_mme_enb_sockets")
-            print("*********************************")
-            print("---------------------------------")
+            print("\nConnecting to MME Socket....")
             self.mme_socket = self.config_connect(self.mme_port)
-            print("++++++++++++++++++++++++++++++++++")
-            self.enb_socket = self.config_connect(self.enb_port)
-            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-            print("Configuration Loaded Successfully")
+            print("****** Connected to MME ******")
             sys.stdout.flush()
-        
+            
         except Exception as e:
-            raise WSNoConnectError("Unable to connect with MME and ENB sockets: {0}".format(e))
+            raise WSNoConnectError("Unable to connect with MME socket: {0}".format(e))
             sys.stdout.flush()
 
-
-    def stop_mme_enb(self):
+    def connect_enb_socket(self):
         try:
+            print("\nConnecting to ENB Socket....")
+            self.enb_socket = self.config_connect(self.enb_port)
+            print("****** Connected to ENB ******")
+            sys.stdout.flush()
+            
+        except Exception as e:
+            raise WSNoConnectError("Unable to connect with ENB socket: {0}".format(e))
+            sys.stdout.flush()
+
+    def stop_mme(self):
+        try:
+            print("Stopping MME. Wait....")
             self.send_custom(self.mme_socket, '{\"message\": \"quit\"}')
-            self.send_custom(self.mme_socket, '{\"message\": \"quit\"}')
-            print("Adding wait of 10 seconds to make sure ENB and MME closed properly")
             sys.stdout.flush()
             time.sleep(10)
         
         except Exception as e:
-            raise WSNoConnectError("Unable to stop MME and ENB: {0}".format(e))
+            raise WSNoConnectError("Unable to stop MME: {0}".format(e))
             sys.stdout.flush()
 
+    def stop_enb(self):
+        try:
+            print("Stopping ENB. Wait....")
+            self.send_custom(self.enb_socket, '{\"message\": \"quit\"}')
+            sys.stdout.flush()
+            time.sleep(10)
+        
+        except Exception as e:
+            raise WSNoConnectError("Unable to stop ENB: {0}".format(e))
+            sys.stdout.flush()
         
     def config_connect(self, port):
         try:
@@ -174,6 +174,49 @@ class Nutaq():
         handle.send(command)
         output = handle.recv()
         return output
+                
+    def check_sockets(self):
+        print("\nChecking if configs are already loaded.")
+        #checking if mme port is already open
+        try:
+            self.sock_address = (self.host, self.mme_port)
+            print("sock address is ")
+            print(self.sock_address)
+            
+            self.sock = socket.socket()
+            self.sock.connect(self.sock_address)
+            
+            if self.sock:
+                print("MME Configurations already loaded on nutaq")
+                self.sock.close()
+                del self.sock
+                self.connect_mme_socket()
+                self.stop_mme()
+                print("Unloaded MME Configurations")
+
+        except socket.error: 
+            print("MME configs not loaded\n")
+
+        #mme port is not opened
+        #checking if enb port is opened
+        try:
+            self.sock_address = (self.host, self.enb_port)
+            print("sock address is ")
+            print(self.sock_address)
+                
+            self.sock = socket.socket()
+            self.sock.connect(self.sock_address)
+                
+            if self.sock:
+                print("ENB Configurations already loaded on nutaq")
+                self.sock.close()
+                del self.sock
+                self.connect_enb_socket()
+                self.stop_enb()
+                print("Unloaded ENB Configurations")
+
+        except socket.error:
+            print("ENB configs not loaded\n")
                 
 if __name__ == '__main__':
 
@@ -204,16 +247,18 @@ if __name__ == '__main__':
     print("SSH connection successfull")
     sys.stdout.flush()
 
+    Nutaq_Handler.check_sockets()
     Nutaq_Handler.run_mme()
     Nutaq_Handler.run_enb()
-    Nutaq_Handler.connect_mme_enb_sockets()
+    Nutaq_Handler.connect_mme_socket()
+    Nutaq_Handler.connect_enb_socket()
 
     if network == "M1":
-        print("CAT-M1 Network Running . . .")
+        print("\nCAT-M1 Network Running . . .")
     elif network == "NB1":
-        print("NB-Iot Network Running . . .")
+        print("\nNB-Iot Network Running . . .")
     else:
-        print("CAT-M1 Network Running . . .")
+        print("\nCAT-M1 Network Running . . .")
 
     sys.stdout.flush()
 
@@ -221,8 +266,10 @@ if __name__ == '__main__':
     sys.stdout.flush()
     time.sleep(20)
             
-    Nutaq_Handler.stop_mme_enb()
-    print("CAT-M1 Stop")
+    Nutaq_Handler.stop_mme()
+    sys.stdout.flush()
+
+    Nutaq_Handler.stop_enb()
     sys.stdout.flush()
         
     Nutaq_Handler.ssh_close()
